@@ -16,7 +16,7 @@ def get_map(coords, size):
 
 
 def find_place(place):
-    global coords, point
+    global coords, point, address
     res = requests.get("http://geocode-maps.yandex.ru/1.x/", params={
         'geocode': place,
         'format': 'json'
@@ -28,7 +28,14 @@ def find_place(place):
     toponym = json_response["response"]["GeoObjectCollection"]["featureMember"]
     if not len(toponym) > 0:
         print('такого места нет')
+        address = 'ТАКОГО МЕСТА НЕТ!'
         return
+    address = toponym[0]['GeoObject']['metaDataProperty']['GeocoderMetaData']['text']
+    if index:
+        try:
+            address = '{} #{}'.format(address, toponym[0]['GeoObject']['metaDataProperty']['GeocoderMetaData']['Address']['postal_code'])
+        except KeyError:
+            address = '{} #{}'.format(address, 'НЕТ ИНДЕКСА')
     toponym = toponym[0]["GeoObject"]
     coords = ','.join(toponym["Point"]["pos"].split())
     point = coords
@@ -53,6 +60,9 @@ def draw_screen(updatemap=True):
     push_buttons.draw(screen)
     for box in input_boxes:
         box.draw(screen)
+    font = pygame.font.SysFont('visitor', 18)
+    txt = font.render(address, True, WHITE)
+    screen.blit(txt, (3, 0))
     pygame.display.flip()
 
 
@@ -81,17 +91,24 @@ class Button(pygame.sprite.Sprite):
         self.image.blit(text, (1, 1))
 
     def get_click(self, pos):
-        global l
+        global l, index
         if self.rect.x <= pos[0] <= self.rect.x + self.rect.width and \
                 self.rect.y <= pos[1] <= self.rect.height + self.rect.y:
-            for i in buttons:
-                i.turned = False
-                i.do_image()
-            self.turned = not self.turned
-            if self.turned:
-                l = self.name
-            self.do_image()
-            return True
+            if self.name == 'map' or self.name == 'sat':
+                for i in buttons:
+                    if i.name in ['map', 'sat']:
+                        i.turned = False
+                        i.do_image()
+                self.turned = not self.turned
+                if self.turned:
+                    l = self.name
+                self.do_image()
+                return True
+            elif self.name == 'Индекс':
+                self.turned = not self.turned
+                index = self.turned
+                self.do_image()
+                return True
         return False
 
 
@@ -186,6 +203,7 @@ COLOR_ACTIVE = pygame.Color('dodgerblue2')
 FONT = pygame.font.Font(None, 32)
 
 WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 GREEN = pygame.Color('green')
 GREY = pygame.Color('grey')
 BLUE = pygame.Color('blue1')
@@ -194,14 +212,19 @@ YELLOW = pygame.Color('yellow3')
 size = 1
 #coords = input()
 coords = '37.572260,55.794994'
+address = ''
+index = False
 point = coords
 mp = get_map(coords, size)
 file = open('map.png', 'wb')
 file.write(mp)
 file.close()
 screen = pygame.display.set_mode((600, 450))
-Button(buttons, 'sat', [0, 200], 80, 40, turned=True)
-Button(buttons, 'map', [0, 242], 80, 40)
+Button(buttons, 'sat', [0, 250], 80, 40, turned=True)
+Button(buttons, 'map', [0, 292], 80, 40)
+
+Button(buttons, 'Индекс', [35, 180], 110, 40)
+
 findbtn = PushButton(push_buttons, 'Найти', [0, 135], 80, 42, YELLOW)
 clrbtn = PushButton(push_buttons, 'Очистить', [82, 135], 118, 42, BLUE)
 input_box1 = InputBox(0, 100, 140, 32)
@@ -266,7 +289,9 @@ while running:
         elif e.type == pygame.MOUSEBUTTONDOWN:
             for i in buttons:
                 if i.get_click(e.pos):
-                    draw_screen()
+                    print('zasdf')
+                    find_place(address)
+                    draw_screen(False)
                     break
             for i in push_buttons:
                 answ = i.get_click(e.pos)
