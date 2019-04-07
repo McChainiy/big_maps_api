@@ -110,15 +110,21 @@ class PushButton(pygame.sprite.Sprite):
     def do_image(self):
         self.image = pygame.Surface([self.width, self.height], pygame.SRCALPHA, 32)
         self.image.fill(self.clr)
-        font = pygame.font.SysFont('visitor', 40)
+        font = pygame.font.SysFont('visitor', 36)
         text = font.render(self.name, 1, (255, 255, 255))
         self.image.blit(text, (1, 1))
 
     def get_click(self, pos):
+        global point
         if self.rect.x <= pos[0] <= self.rect.x + self.rect.width and \
                 self.rect.y <= pos[1] <= self.rect.height + self.rect.y:
-            return input_box1.get_text()
-        return False
+            if self.name == 'Найти':
+                return [input_box1.get_text(), 'text']
+            elif self.name == 'Очистить':
+                input_box1.get_text() #очищение текстового поля
+                point = ''
+                return [False, 'clear']
+        return [False, False]
 
 
 class InputBox:
@@ -157,7 +163,6 @@ class InputBox:
         self.txt_surface = FONT.render(self.text, True, self.color)
         return text
 
-
     def update(self):
         # Resize the box if the text is too long.
         width = max(200, self.txt_surface.get_width()+10)
@@ -183,11 +188,12 @@ FONT = pygame.font.Font(None, 32)
 WHITE = (255, 255, 255)
 GREEN = pygame.Color('green')
 GREY = pygame.Color('grey')
-YELLOW = pygame.Color('yellow')
+BLUE = pygame.Color('blue1')
+YELLOW = pygame.Color('yellow3')
 
 size = 1
-coords = input()
-#coords = '37.572260,55.794994'
+#coords = input()
+coords = '37.572260,55.794994'
 point = coords
 mp = get_map(coords, size)
 file = open('map.png', 'wb')
@@ -196,7 +202,8 @@ file.close()
 screen = pygame.display.set_mode((600, 450))
 Button(buttons, 'sat', [0, 200], 80, 40, turned=True)
 Button(buttons, 'map', [0, 242], 80, 40)
-findbtn = PushButton(push_buttons, 'Найти', [0, 135], 80, 40, YELLOW)
+findbtn = PushButton(push_buttons, 'Найти', [0, 135], 80, 42, YELLOW)
+clrbtn = PushButton(push_buttons, 'Очистить', [82, 135], 118, 42, BLUE)
 input_box1 = InputBox(0, 100, 140, 32)
 input_boxes = [input_box1]
 
@@ -262,22 +269,27 @@ while running:
                     draw_screen()
                     break
             for i in push_buttons:
-                text = i.get_click(e.pos)
-                print(text)
-                if text:
+                answ = i.get_click(e.pos)
+                if answ[1] == 'text':
                     for box in input_boxes:
-                        box.handle_event(e)
                         box.update()
                         box.draw(screen)
-                    find_place(text)
+                    find_place(answ[0])
                     draw_screen()
                     break
+                elif answ[1] == 'clear':
+                    for box in input_boxes:
+                        box.update()
+                        box.draw(screen)
+                    draw_screen()
+
         for box in input_boxes:
             text = box.handle_event(e)
             box.update()
             box.draw(screen)
-        if text:
-            find_place(text)
+            if text:
+                find_place(text)
+                break
 
         screen.fill(WHITE)
 
